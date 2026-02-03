@@ -1,3 +1,4 @@
+// No SWR import - using native React hooks only
 import { useEffect, useState } from 'react'
 
 export interface PageContent {
