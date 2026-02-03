@@ -22,22 +22,38 @@ import {
   X,
 } from "lucide-react"
 import { useState, useEffect } from "react"
-import { usePageContent, getContentByKey } from "@/hooks/usePageContent"
 
 export default function HomePage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
-  const { content, isLoading } = usePageContent()
   const [heroContent, setHeroContent] = useState<any>(null)
   const [aboutContent, setAboutContent] = useState<any>(null)
   const [eventsContent, setEventsContent] = useState<any>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
-    if (content.length > 0) {
-      setHeroContent(getContentByKey(content, 'hero'))
-      setAboutContent(getContentByKey(content, 'about'))
-      setEventsContent(getContentByKey(content, 'events'))
+    const fetchContent = async () => {
+      try {
+        const response = await fetch('/api/admin/content')
+        if (response.ok) {
+          const data = await response.json()
+          // Find content by section_key
+          const hero = data.find((item: any) => item.section_key === 'hero')?.content
+          const about = data.find((item: any) => item.section_key === 'about')?.content
+          const events = data.find((item: any) => item.section_key === 'events')?.content
+          
+          setHeroContent(hero)
+          setAboutContent(about)
+          setEventsContent(events)
+        }
+      } catch (error) {
+        console.error('Failed to fetch content:', error)
+      } finally {
+        setIsLoading(false)
+      }
     }
-  }, [content])
+
+    fetchContent()
+  }, [])
 
   const scrollToSection = (sectionId: string) => {
     const section = document.getElementById(sectionId)
