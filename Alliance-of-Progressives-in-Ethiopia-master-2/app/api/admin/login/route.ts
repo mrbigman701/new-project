@@ -12,19 +12,13 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get the Supabase URL and key from environment
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-    console.log('[v0] Login API - Checking env vars')
-    console.log('[v0] NEXT_PUBLIC_SUPABASE_URL:', supabaseUrl ? 'SET' : 'MISSING')
-    console.log('[v0] SUPABASE_SERVICE_ROLE_KEY:', supabaseKey ? 'SET' : 'MISSING')
+    // Get the Supabase URL and key from environment (try multiple possible names)
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
 
     if (!supabaseUrl || !supabaseKey) {
-      console.error('[v0] Missing Supabase environment variables')
-      console.error('[v0] Available env vars:', Object.keys(process.env).filter(k => k.includes('SUPABASE')))
       return NextResponse.json(
-        { error: 'Server configuration error - Missing Supabase credentials. Please check environment variables.' },
+        { error: 'Server configuration error' },
         { status: 500 }
       )
     }
