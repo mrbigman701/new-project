@@ -109,9 +109,13 @@ export default function AdminDashboard() {
     setSuccessMessage('')
 
     try {
+      const token = localStorage.getItem('admin_token')
       const response = await fetch('/api/admin/content', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-token': token || '',
+        },
         body: JSON.stringify({
           section_name: 'Hero Section',
           section_key: 'hero',
@@ -140,9 +144,13 @@ export default function AdminDashboard() {
     setSuccessMessage('')
 
     try {
+      const token = localStorage.getItem('admin_token')
       const response = await fetch('/api/admin/content', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-token': token || '',
+        },
         body: JSON.stringify({
           section_name: 'About Section',
           section_key: 'about',
@@ -171,9 +179,13 @@ export default function AdminDashboard() {
     setSuccessMessage('')
 
     try {
+      const token = localStorage.getItem('admin_token')
       const response = await fetch('/api/admin/content', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'x-admin-token': token || '',
+        },
         body: JSON.stringify({
           section_name: 'Events Section',
           section_key: 'events',
