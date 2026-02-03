@@ -1,6 +1,7 @@
 "use client"
 
 import Image from "next/image"
+import Link from "next/link"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
@@ -20,11 +21,23 @@ import {
   Menu,
   X,
 } from "lucide-react"
-import { useState } from "react"
-
+import { useState, useEffect } from "react"
+import { usePageContent, getContentByKey } from "@/hooks/usePageContent"
 
 export default function HomePage() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { content, isLoading } = usePageContent()
+  const [heroContent, setHeroContent] = useState<any>(null)
+  const [aboutContent, setAboutContent] = useState<any>(null)
+  const [eventsContent, setEventsContent] = useState<any>(null)
+
+  useEffect(() => {
+    if (content.length > 0) {
+      setHeroContent(getContentByKey(content, 'hero'))
+      setAboutContent(getContentByKey(content, 'about'))
+      setEventsContent(getContentByKey(content, 'events'))
+    }
+  }, [content])
 
   const scrollToSection = (sectionId: string) => {
     const section = document.getElementById(sectionId)
@@ -39,21 +52,26 @@ export default function HomePage() {
       {/* Top Navigation with Social Links */}
       <div style={{ backgroundColor: "#F2FBF3" }} className="border-b border-gray-200">
         <div className="container mx-auto px-4 py-2">
-          <div className="flex justify-end items-center space-x-4">
-            <a href="#" className="text-blue-600 hover:text-blue-700">
-              <Facebook className="w-4 h-4" />
-            </a>
-            <a href="#" className="text-black hover:text-gray-700">
-              <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-              </svg>
-            </a>
-            <a href="#" className="text-pink-600 hover:text-pink-700">
-              <Instagram className="w-4 h-4" />
-            </a>
-            <a href="#" className="text-red-600 hover:text-red-700">
-              <Youtube className="w-4 h-4" />
-            </a>
+          <div className="flex justify-between items-center">
+            <Link href="/admin/login" className="text-sm text-gray-600 hover:text-gray-800">
+              Admin Portal
+            </Link>
+            <div className="flex justify-end items-center space-x-4">
+              <a href="#" className="text-blue-600 hover:text-blue-700">
+                <Facebook className="w-4 h-4" />
+              </a>
+              <a href="#" className="text-black hover:text-gray-700">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+                </svg>
+              </a>
+              <a href="#" className="text-pink-600 hover:text-pink-700">
+                <Instagram className="w-4 h-4" />
+              </a>
+              <a href="#" className="text-red-600 hover:text-red-700">
+                <Youtube className="w-4 h-4" />
+              </a>
+            </div>
           </div>
         </div>
       </div>
@@ -171,10 +189,10 @@ export default function HomePage() {
         <div className="relative z-20 container mx-auto px-4 h-full flex items-center justify-center text-center">
           <div className="text-white max-w-4xl px-4">
             <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6" style={{ fontFamily: "Source Sans Pro, sans-serif" }}>
-              Alliance of Progressives in Ethiopia
+              {heroContent?.title || "Alliance of Progressives in Ethiopia"}
             </h1>
             <p className="text-lg md:text-xl mb-8" style={{ color: "#FFFFFF", fontFamily: "Source Sans Pro, sans-serif" }}>
-              Empowering Southern Nations through Action, Research, and Advocacy
+              {heroContent?.subtitle || "Empowering Southern Nations through Action, Research, and Advocacy"}
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
               <button
@@ -184,7 +202,7 @@ export default function HomePage() {
                   fontFamily: "Source Sans Pro, sans-serif",
                 }}
               >
-                Join the movement
+                {heroContent?.primaryBtnText || "Join the movement"}
               </button>
               <button
                 className="text-white px-6 py-2 md:px-8 md:py-3 text-lg font-medium"
@@ -193,7 +211,7 @@ export default function HomePage() {
                   fontFamily: "Source Sans Pro, sans-serif",
                 }}
               >
-                Support Our Work
+                {heroContent?.secondaryBtnText || "Support Our Work"}
               </button>
             </div>
           </div>
@@ -203,18 +221,14 @@ export default function HomePage() {
       {/* About Section */}
       <section id="about" className="py-12 md:py-16 bg-white">
         <div className="container mx-auto px-4">
-          <h2 className="text-3xl font-bold mb-8 text-gray-800 text-center">About us</h2>
+          <h2 className="text-3xl font-bold mb-8 text-gray-800 text-center">{aboutContent?.title || "About us"}</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-w-6xl mx-auto">
             {/* Who we are Card */}
             <div className="bg-white border-t-4 border-[#441F04] p-6 rounded-lg shadow-sm h-full">
               <h3 className="text-xl font-bold mb-4 text-gray-800">Who we are</h3>
               <p className="text-gray-700 leading-relaxed">
-                The Alliance of Progressives in Ethiopia (APE) was founded to advocate for socio-political and
-                community leaders from the historically marginalized nations and nationalities of Southern Ethiopia –
-                including but not limited to Sidama, Wolaita, Hadiya, Kambata, Gamo, and over 90 others. United by a
-                shared vision of self-determination, federal pluralism, and justice, APE emerged in response to
-                decades of political exclusion, economic inequality, and cultural erasure.
+                {aboutContent?.whoWeAre || "The Alliance of Progressives in Ethiopia (APE) was founded to advocate for socio-political and community leaders from the historically marginalized nations and nationalities of Southern Ethiopia – including but not limited to Sidama, Wolaita, Hadiya, Kambata, Gamo, and over 90 others. United by a shared vision of self-determination, federal pluralism, and justice, APE emerged in response to decades of political exclusion, economic inequality, and cultural erasure."}
               </p>
             </div>
 
@@ -222,10 +236,7 @@ export default function HomePage() {
             <div className="bg-white border-t-4 border-[#441F04] p-6 rounded-lg shadow-sm h-full">
               <h3 className="text-xl font-bold mb-4 text-gray-800">Our Founders</h3>
               <p className="text-gray-700 leading-relaxed">
-                APE's founders are a diverse coalition of civic actors: scholars, lawyers, researchers, grassroots
-                organizers, elders, and youth from across the Southern Nations. Many have been engaged in nonviolent
-                advocacy, constitutional reform efforts, and community development for decades. Together, they embody
-                APE's ethos of generational wisdom, cultural pride, and inclusive leadership.
+                {aboutContent?.ourFounders || "APE's founders are a diverse coalition of civic actors: scholars, lawyers, researchers, grassroots organizers, elders, and youth from across the Southern Nations. Many have been engaged in nonviolent advocacy, constitutional reform efforts, and community development for decades. Together, they embody APE's ethos of generational wisdom, cultural pride, and inclusive leadership."}
               </p>
             </div>
 
@@ -233,8 +244,7 @@ export default function HomePage() {
             <div className="bg-white border-t-4 border-[#441F04] p-6 rounded-lg shadow-sm h-full md:col-span-2 lg:col-span-1">
               <h3 className="text-xl font-bold mb-4 text-gray-800">Our Mission</h3>
               <p className="text-gray-700 leading-relaxed mb-4">
-                APE's mission is to advance the political, economic, social, and cultural empowerment of Southern
-                Ethiopian nations and nationalities. We do this through:
+                {aboutContent?.ourMission || "APE's mission is to advance the political, economic, social, and cultural empowerment of Southern Ethiopian nations and nationalities. We do this through:"}
               </p>
               <ul className="text-gray-700 space-y-2">
                 <li className="flex items-start">
@@ -354,11 +364,11 @@ export default function HomePage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 max-w-4xl mx-auto">
             {/* Event 1 */}
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-              <h3 className="text-lg font-semibold mb-2 text-gray-800">National Webinar</h3>
+              <h3 className="text-lg font-semibold mb-2 text-gray-800">{eventsContent?.event1Title || "National Webinar"}</h3>
               <h4 className="text-lg font-medium mb-4 text-gray-800">
-                Federalism and Self-Determination: Rights or Rhetoric?
+                {eventsContent?.event1Subtitle || "Federalism and Self-Determination: Rights or Rhetoric?"}
               </h4>
-              <p className="text-gray-600 mb-6">July 10, 2025 • 6 PM EAT • Online (Zoom)</p>
+              <p className="text-gray-600 mb-6">{eventsContent?.event1Date || "July 10, 2025 • 6 PM EAT • Online (Zoom)"}</p>
               <Button className="text-white px-6 py-2 font-medium w-full md:w-auto" style={{ backgroundColor: "#441F04" }}>
                 Register Now
               </Button>
@@ -366,11 +376,11 @@ export default function HomePage() {
 
             {/* Event 2 */}
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-              <h3 className="text-lg font-semibold mb-2 text-gray-800">Community Workshop</h3>
+              <h3 className="text-lg font-semibold mb-2 text-gray-800">{eventsContent?.event2Title || "Community Workshop"}</h3>
               <h4 className="text-lg font-medium mb-4 text-gray-800">
-                Grassroots Organizing for Social Change
+                {eventsContent?.event2Subtitle || "Grassroots Organizing for Social Change"}
               </h4>
-              <p className="text-gray-600 mb-6">July 24, 2025 • 9 AM EAT • Hawassa, Ethiopia</p>
+              <p className="text-gray-600 mb-6">{eventsContent?.event2Date || "July 24, 2025 • 9 AM EAT • Hawassa, Ethiopia"}</p>
               <Button className="text-white px-6 py-2 font-medium w-full md:w-auto" style={{ backgroundColor: "#441F04" }}>
                 Register Now
               </Button>
