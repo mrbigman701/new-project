@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -11,14 +10,19 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Loader2, LogOut, CheckCircle, AlertCircle } from 'lucide-react'
 
+interface PageContent {
+  section_key: string
+  section_name: string
+  content: Record<string, any>
+}
+
 export default function AdminDashboard() {
-  const [user, setUser] = useState<any>(null)
+  const [authenticated, setAuthenticated] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [successMessage, setSuccessMessage] = useState('')
   const [errorMessage, setErrorMessage] = useState('')
   const router = useRouter()
-  const supabase = createClient()
 
   // Hero section state
   const [heroTitle, setHeroTitle] = useState('Alliance of Progressives in Ethiopia')
@@ -44,26 +48,15 @@ export default function AdminDashboard() {
   useEffect(() => {
     async function checkAuth() {
       try {
-        const { data: authData } = await supabase.auth.getUser()
+        const token = localStorage.getItem('admin_token')
+        const adminId = localStorage.getItem('admin_id')
 
-        if (!authData.user) {
+        if (!token || !adminId) {
           router.push('/admin/login')
           return
         }
 
-        // Check admin privileges
-        const { data: adminData, error } = await supabase
-          .from('admin_users')
-          .select('*')
-          .eq('id', authData.user.id)
-          .single()
-
-        if (error || !adminData) {
-          router.push('/admin/login')
-          return
-        }
-
-        setUser(authData.user)
+        setAuthenticated(true)
         await loadContent()
       } catch (error) {
         console.error('Auth check failed:', error)
@@ -74,17 +67,17 @@ export default function AdminDashboard() {
     }
 
     checkAuth()
-  }, [router, supabase])
+  }, [router])
 
   async function loadContent() {
     try {
       const response = await fetch('/api/admin/content')
       if (!response.ok) throw new Error('Failed to load content')
 
-      const content = await response.json()
+      const content: PageContent[] = await response.json()
 
       // Map content to state
-      content.forEach((item: any) => {
+      content.forEach((item) => {
         if (item.section_key === 'hero') {
           setHeroTitle(item.content.title || heroTitle)
           setHeroSubtitle(item.content.subtitle || heroSubtitle)
@@ -105,20 +98,21 @@ export default function AdminDashboard() {
         }
       })
     } catch (error) {
-      console.error('Error loading content:', error)
+      console.error('Failed to load content:', error)
+      setErrorMessage('Failed to load content')
     }
   }
 
-  async function saveContent(section: string) {
+  async function saveHeroContent() {
     setSaving(true)
     setErrorMessage('')
     setSuccessMessage('')
 
     try {
-      let contentData = {}
-
-      if (section === 'hero') {
-        contentData = {
+      const response = await fetch('/api/admin/content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           section_name: 'Hero Section',
           section_key: 'hero',
           content: {
@@ -127,9 +121,29 @@ export default function AdminDashboard() {
             primaryBtnText: heroPrimaryBtnText,
             secondaryBtnText: heroSecondaryBtnText,
           },
-        }
-      } else if (section === 'about') {
-        contentData = {
+        }),
+      })
+
+      if (!response.ok) throw new Error('Failed to save')
+      setSuccessMessage('Hero section updated successfully!')
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (error) {
+      setErrorMessage('Failed to save hero section')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function saveAboutContent() {
+    setSaving(true)
+    setErrorMessage('')
+    setSuccessMessage('')
+
+    try {
+      const response = await fetch('/api/admin/content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           section_name: 'About Section',
           section_key: 'about',
           content: {
@@ -138,9 +152,29 @@ export default function AdminDashboard() {
             ourFounders: ourFoundersText,
             ourMission: ourMissionText,
           },
-        }
-      } else if (section === 'events') {
-        contentData = {
+        }),
+      })
+
+      if (!response.ok) throw new Error('Failed to save')
+      setSuccessMessage('About section updated successfully!')
+      setTimeout(() => setSuccessMessage(''), 3000)
+    } catch (error) {
+      setErrorMessage('Failed to save about section')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  async function saveEventsContent() {
+    setSaving(true)
+    setErrorMessage('')
+    setSuccessMessage('')
+
+    try {
+      const response = await fetch('/api/admin/content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
           section_name: 'Events Section',
           section_key: 'events',
           content: {
@@ -151,291 +185,279 @@ export default function AdminDashboard() {
             event2Subtitle,
             event2Date,
           },
-        }
-      }
-
-      const response = await fetch('/api/admin/content', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(contentData),
+        }),
       })
 
-      if (!response.ok) throw new Error('Failed to save content')
-
-      setSuccessMessage(`${section} content updated successfully!`)
+      if (!response.ok) throw new Error('Failed to save')
+      setSuccessMessage('Events section updated successfully!')
       setTimeout(() => setSuccessMessage(''), 3000)
     } catch (error) {
-      setErrorMessage(error instanceof Error ? error.message : 'Failed to save content')
+      setErrorMessage('Failed to save events section')
     } finally {
       setSaving(false)
     }
   }
 
-  async function handleLogout() {
-    await supabase.auth.signOut()
+  function handleLogout() {
+    localStorage.removeItem('admin_token')
+    localStorage.removeItem('admin_id')
     router.push('/admin/login')
   }
 
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
     )
+  }
+
+  if (!authenticated) {
+    return null
   }
 
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Header */}
-      <header className="bg-white shadow-sm sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 flex justify-between items-center">
+      <div className="bg-white border-b">
+        <div className="max-w-7xl mx-auto px-4 py-6 flex justify-between items-center">
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
-            <p className="text-sm text-gray-600 mt-1">{user?.email}</p>
+            <h1 className="text-3xl font-bold text-gray-900">Admin Dashboard</h1>
+            <p className="text-gray-600">Manage your website content</p>
           </div>
-          <Button
-            onClick={handleLogout}
-            variant="outline"
-            className="flex items-center gap-2"
-          >
-            <LogOut className="w-4 h-4" />
+          <Button variant="outline" onClick={handleLogout}>
+            <LogOut className="mr-2 h-4 w-4" />
             Logout
           </Button>
         </div>
-      </header>
+      </div>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div className="max-w-7xl mx-auto px-4 py-8">
         {successMessage && (
-          <Alert className="mb-6 border-green-200 bg-green-50">
+          <Alert className="mb-6 bg-green-50 border-green-200">
             <CheckCircle className="h-4 w-4 text-green-600" />
             <AlertDescription className="text-green-800">{successMessage}</AlertDescription>
           </Alert>
         )}
 
         {errorMessage && (
-          <Alert variant="destructive" className="mb-6">
-            <AlertCircle className="h-4 w-4" />
-            <AlertDescription>{errorMessage}</AlertDescription>
+          <Alert className="mb-6 bg-red-50 border-red-200">
+            <AlertCircle className="h-4 w-4 text-red-600" />
+            <AlertDescription className="text-red-800">{errorMessage}</AlertDescription>
           </Alert>
         )}
 
         <Tabs defaultValue="hero" className="space-y-6">
-          <TabsList className="grid w-full max-w-md grid-cols-3">
-            <TabsTrigger value="hero">Hero</TabsTrigger>
-            <TabsTrigger value="about">About</TabsTrigger>
-            <TabsTrigger value="events">Events</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="hero">Hero Section</TabsTrigger>
+            <TabsTrigger value="about">About Section</TabsTrigger>
+            <TabsTrigger value="events">Events Section</TabsTrigger>
           </TabsList>
 
-          {/* Hero Section Editor */}
-          <TabsContent value="hero" className="space-y-6">
+          {/* Hero Section Tab */}
+          <TabsContent value="hero">
             <Card>
               <CardHeader>
-                <CardTitle>Hero Section</CardTitle>
-                <CardDescription>Edit the main hero section content</CardDescription>
+                <CardTitle>Edit Hero Section</CardTitle>
+                <CardDescription>
+                  Update the main banner content that appears at the top of your homepage
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Main Title</label>
+                  <label className="text-sm font-medium block mb-2">Main Title</label>
                   <Input
                     value={heroTitle}
                     onChange={(e) => setHeroTitle(e.target.value)}
-                    className="mt-1"
+                    placeholder="Alliance of Progressives in Ethiopia"
                   />
                 </div>
+
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Subtitle</label>
-                  <Input
+                  <label className="text-sm font-medium block mb-2">Subtitle</label>
+                  <Textarea
                     value={heroSubtitle}
                     onChange={(e) => setHeroSubtitle(e.target.value)}
-                    className="mt-1"
+                    placeholder="Empowering Southern Nations through Action, Research, and Advocacy"
+                    rows={3}
                   />
                 </div>
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <label className="text-sm font-medium text-gray-700">
-                      Primary Button Text
-                    </label>
+                    <label className="text-sm font-medium block mb-2">Primary Button Text</label>
                     <Input
                       value={heroPrimaryBtnText}
                       onChange={(e) => setHeroPrimaryBtnText(e.target.value)}
-                      className="mt-1"
+                      placeholder="Join the movement"
                     />
                   </div>
                   <div>
-                    <label className="text-sm font-medium text-gray-700">
-                      Secondary Button Text
-                    </label>
+                    <label className="text-sm font-medium block mb-2">Secondary Button Text</label>
                     <Input
                       value={heroSecondaryBtnText}
                       onChange={(e) => setHeroSecondaryBtnText(e.target.value)}
-                      className="mt-1"
+                      placeholder="Support Our Work"
                     />
                   </div>
                 </div>
+
                 <Button
-                  onClick={() => saveContent('hero')}
+                  onClick={saveHeroContent}
                   disabled={saving}
+                  className="w-full"
                   style={{ backgroundColor: '#441F04' }}
                 >
-                  {saving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
+                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {saving ? 'Saving...' : 'Save Changes'}
                 </Button>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* About Section Editor */}
-          <TabsContent value="about" className="space-y-6">
+          {/* About Section Tab */}
+          <TabsContent value="about">
             <Card>
               <CardHeader>
-                <CardTitle>About Section</CardTitle>
-                <CardDescription>Edit the about section content</CardDescription>
+                <CardTitle>Edit About Section</CardTitle>
+                <CardDescription>
+                  Update information about your organization
+                </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-6">
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Section Title</label>
+                  <label className="text-sm font-medium block mb-2">Section Title</label>
                   <Input
                     value={aboutTitle}
                     onChange={(e) => setAboutTitle(e.target.value)}
-                    className="mt-1"
+                    placeholder="About us"
                   />
                 </div>
+
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Who We Are</label>
+                  <label className="text-sm font-medium block mb-2">Who We Are</label>
                   <Textarea
                     value={whoWeAreText}
                     onChange={(e) => setWhoWeAreText(e.target.value)}
-                    className="mt-1 min-h-32"
+                    placeholder="Describe your organization..."
+                    rows={4}
                   />
                 </div>
+
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Our Founders</label>
+                  <label className="text-sm font-medium block mb-2">Our Founders</label>
                   <Textarea
                     value={ourFoundersText}
                     onChange={(e) => setOurFoundersText(e.target.value)}
-                    className="mt-1 min-h-32"
+                    placeholder="Describe your founders..."
+                    rows={4}
                   />
                 </div>
+
                 <div>
-                  <label className="text-sm font-medium text-gray-700">Our Mission</label>
+                  <label className="text-sm font-medium block mb-2">Our Mission</label>
                   <Textarea
                     value={ourMissionText}
                     onChange={(e) => setOurMissionText(e.target.value)}
-                    className="mt-1 min-h-32"
+                    placeholder="Describe your mission..."
+                    rows={4}
                   />
                 </div>
+
                 <Button
-                  onClick={() => saveContent('about')}
+                  onClick={saveAboutContent}
                   disabled={saving}
+                  className="w-full"
                   style={{ backgroundColor: '#441F04' }}
                 >
-                  {saving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
+                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {saving ? 'Saving...' : 'Save Changes'}
                 </Button>
               </CardContent>
             </Card>
           </TabsContent>
 
-          {/* Events Section Editor */}
-          <TabsContent value="events" className="space-y-6">
+          {/* Events Section Tab */}
+          <TabsContent value="events">
             <Card>
               <CardHeader>
-                <CardTitle>Events Section</CardTitle>
-                <CardDescription>Edit the events content</CardDescription>
+                <CardTitle>Edit Events Section</CardTitle>
+                <CardDescription>
+                  Update featured events on your homepage
+                </CardDescription>
               </CardHeader>
               <CardContent className="space-y-6">
-                <div className="border-b pb-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Event 1</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">Title</label>
-                      <Input
-                        value={event1Title}
-                        onChange={(e) => setEvent1Title(e.target.value)}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">Subtitle</label>
-                      <Input
-                        value={event1Subtitle}
-                        onChange={(e) => setEvent1Subtitle(e.target.value)}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">Date & Time</label>
-                      <Input
-                        value={event1Date}
-                        onChange={(e) => setEvent1Date(e.target.value)}
-                        className="mt-1"
-                      />
-                    </div>
+                <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+                  <h3 className="font-semibold">Event 1</h3>
+                  <div>
+                    <label className="text-sm font-medium block mb-2">Title</label>
+                    <Input
+                      value={event1Title}
+                      onChange={(e) => setEvent1Title(e.target.value)}
+                      placeholder="National Webinar"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-2">Subtitle</label>
+                    <Input
+                      value={event1Subtitle}
+                      onChange={(e) => setEvent1Subtitle(e.target.value)}
+                      placeholder="Event topic..."
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-2">Date & Time</label>
+                    <Input
+                      value={event1Date}
+                      onChange={(e) => setEvent1Date(e.target.value)}
+                      placeholder="July 10, 2025 • 6 PM EAT • Online (Zoom)"
+                    />
                   </div>
                 </div>
 
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-900 mb-4">Event 2</h3>
-                  <div className="space-y-4">
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">Title</label>
-                      <Input
-                        value={event2Title}
-                        onChange={(e) => setEvent2Title(e.target.value)}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">Subtitle</label>
-                      <Input
-                        value={event2Subtitle}
-                        onChange={(e) => setEvent2Subtitle(e.target.value)}
-                        className="mt-1"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium text-gray-700">Date & Time</label>
-                      <Input
-                        value={event2Date}
-                        onChange={(e) => setEvent2Date(e.target.value)}
-                        className="mt-1"
-                      />
-                    </div>
+                <div className="space-y-4 p-4 bg-gray-50 rounded-lg">
+                  <h3 className="font-semibold">Event 2</h3>
+                  <div>
+                    <label className="text-sm font-medium block mb-2">Title</label>
+                    <Input
+                      value={event2Title}
+                      onChange={(e) => setEvent2Title(e.target.value)}
+                      placeholder="Community Workshop"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-2">Subtitle</label>
+                    <Input
+                      value={event2Subtitle}
+                      onChange={(e) => setEvent2Subtitle(e.target.value)}
+                      placeholder="Event topic..."
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium block mb-2">Date & Time</label>
+                    <Input
+                      value={event2Date}
+                      onChange={(e) => setEvent2Date(e.target.value)}
+                      placeholder="July 24, 2025 • 9 AM EAT • Hawassa, Ethiopia"
+                    />
                   </div>
                 </div>
 
                 <Button
-                  onClick={() => saveContent('events')}
+                  onClick={saveEventsContent}
                   disabled={saving}
+                  className="w-full"
                   style={{ backgroundColor: '#441F04' }}
                 >
-                  {saving ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Saving...
-                    </>
-                  ) : (
-                    'Save Changes'
-                  )}
+                  {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  {saving ? 'Saving...' : 'Save Changes'}
                 </Button>
               </CardContent>
             </Card>
           </TabsContent>
         </Tabs>
-      </main>
+      </div>
     </div>
   )
 }

@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -15,7 +14,6 @@ export default function AdminLoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const router = useRouter()
-  const supabase = createClient()
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault()
@@ -23,29 +21,24 @@ export default function AdminLoginPage() {
     setError(null)
 
     try {
-      const { data, error: authError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
+      const response = await fetch('/api/admin/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
       })
 
-      if (authError) throw authError
+      const data = await response.json()
 
-      if (data.user) {
-        // Check if user is admin
-        const { data: adminData, error: adminError } = await supabase
-          .from('admin_users')
-          .select('id')
-          .eq('id', data.user.id)
-          .single()
-
-        if (adminError || !adminData) {
-          setError('Access denied: You do not have admin privileges.')
-          await supabase.auth.signOut()
-          return
-        }
-
-        router.push('/admin/dashboard')
+      if (!response.ok) {
+        setError(data.error || 'Login failed')
+        return
       }
+
+      // Store auth token
+      localStorage.setItem('admin_token', data.token)
+      localStorage.setItem('admin_id', data.id)
+      
+      router.push('/admin/dashboard')
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Login failed')
     } finally {
@@ -54,11 +47,13 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-b from-green-50 to-white px-4">
+    <div className="min-h-screen flex items-center justify-center bg-gray-50 px-4">
       <Card className="w-full max-w-md">
-        <CardHeader className="space-y-2">
-          <CardTitle className="text-2xl">Admin Login</CardTitle>
-          <CardDescription>Sign in to manage page content</CardDescription>
+        <CardHeader>
+          <CardTitle>Admin Portal</CardTitle>
+          <CardDescription>
+            Alliance of Progressives in Ethiopia
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
@@ -68,12 +63,10 @@ export default function AdminLoginPage() {
                 <AlertDescription>{error}</AlertDescription>
               </Alert>
             )}
+
             <div className="space-y-2">
-              <label htmlFor="email" className="text-sm font-medium text-gray-700">
-                Email
-              </label>
+              <label className="text-sm font-medium">Email</label>
               <Input
-                id="email"
                 type="email"
                 placeholder="admin@example.com"
                 value={email}
@@ -82,34 +75,27 @@ export default function AdminLoginPage() {
                 disabled={loading}
               />
             </div>
+
             <div className="space-y-2">
-              <label htmlFor="password" className="text-sm font-medium text-gray-700">
-                Password
-              </label>
+              <label className="text-sm font-medium">Password</label>
               <Input
-                id="password"
                 type="password"
-                placeholder="Enter your password"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
               />
             </div>
+
             <Button
               type="submit"
               className="w-full"
               disabled={loading}
               style={{ backgroundColor: '#441F04' }}
             >
-              {loading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Signing in...
-                </>
-              ) : (
-                'Sign In'
-              )}
+              {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {loading ? 'Logging in...' : 'Login'}
             </Button>
           </form>
         </CardContent>

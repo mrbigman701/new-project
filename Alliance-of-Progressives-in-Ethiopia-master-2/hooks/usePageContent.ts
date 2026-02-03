@@ -1,6 +1,6 @@
-import useSWR from 'swr'
+import { useEffect, useState } from 'react'
 
-interface PageContent {
+export interface PageContent {
   id: string
   section_key: string
   section_name: string
@@ -8,19 +8,30 @@ interface PageContent {
   last_edited_at: string
 }
 
-const fetcher = (url: string) => fetch(url).then((res) => res.json())
-
 export function usePageContent() {
-  const { data, error, isLoading } = useSWR<PageContent[]>('/api/admin/content', fetcher, {
-    revalidateOnFocus: false,
-    revalidateOnReconnect: false,
-  })
+  const [data, setData] = useState<PageContent[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<Error | null>(null)
 
-  return {
-    content: data || [],
-    isLoading,
-    error,
-  }
+  useEffect(() => {
+    const fetchContent = async () => {
+      try {
+        setIsLoading(true)
+        const response = await fetch('/api/admin/content')
+        if (!response.ok) throw new Error('Failed to fetch content')
+        const result = await response.json()
+        setData(result)
+      } catch (err) {
+        setError(err instanceof Error ? err : new Error('Unknown error'))
+      } finally {
+        setIsLoading(false)
+      }
+    }
+
+    fetchContent()
+  }, [])
+
+  return { content: data, isLoading, error }
 }
 
 export function getContentByKey(content: PageContent[], key: string) {

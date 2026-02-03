@@ -4,24 +4,8 @@ import { NextRequest, NextResponse } from 'next/server'
 export async function GET(request: NextRequest) {
   try {
     const supabase = await createClient()
-    const { data: user } = await supabase.auth.getUser()
 
-    if (!user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
-    }
-
-    // Check if user is admin
-    const { data: adminData, error: adminError } = await supabase
-      .from('admin_users')
-      .select('id')
-      .eq('id', user.id)
-      .single()
-
-    if (adminError || !adminData) {
-      return NextResponse.json({ error: 'Access denied' }, { status: 403 })
-    }
-
-    // Get all page content
+    // Get all page content - allow public read
     const { data: content, error: contentError } = await supabase
       .from('page_content')
       .select('*')
@@ -29,7 +13,7 @@ export async function GET(request: NextRequest) {
 
     if (contentError) throw contentError
 
-    return NextResponse.json(content)
+    return NextResponse.json(content || [])
   } catch (error) {
     console.error('Error fetching content:', error)
     return NextResponse.json({ error: 'Failed to fetch content' }, { status: 500 })
