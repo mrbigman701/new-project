@@ -1,3 +1,4 @@
+import { createClient } from '@/lib/supabase/server'
 import { NextRequest, NextResponse } from 'next/server'
 import crypto from 'crypto'
 
@@ -12,35 +13,24 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get the Supabase URL and key from environment (try multiple possible names)
-    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
+    const supabase = await createClient()
 
-    if (!supabaseUrl || !supabaseKey) {
+    // Query the admin_users table
+    const { data: users, error } = await supabase
+      .from('admin_users')
+      .select('id, email, password_hash')
+      .eq('email', email)
+      .limit(1)
+
+    if (error) {
+      console.error('Database error:', error)
       return NextResponse.json(
-        { error: 'Server configuration error' },
+        { error: 'Server error' },
         { status: 500 }
       )
     }
 
-    // Query the admin_users table
-    const response = await fetch(`${supabaseUrl}/rest/v1/admin_users?email=eq.${encodeURIComponent(email)}`, {
-      headers: {
-        'apikey': supabaseKey,
-        'Authorization': `Bearer ${supabaseKey}`,
-        'Content-Type': 'application/json',
-      },
-    })
-
-    if (!response.ok) {
-      return NextResponse.json(
-        { error: 'Invalid email or password' },
-        { status: 401 }
-      )
-    }
-
-    const users = await response.json()
-    const admin = users[0]
+    const admin = users?.[0]
 
     if (!admin) {
       return NextResponse.json(
