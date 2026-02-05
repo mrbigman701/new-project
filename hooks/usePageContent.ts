@@ -1,8 +1,11 @@
 "use client"
-// Fixed: Using native React hooks instead of SWR
+
+// UPDATED: This hook uses native React hooks - NO SWR dependency
+// Last modified: 2026-02-05 - Complete rewrite to fix build issues
+
 import { useEffect, useState } from 'react'
 
-interface PageContent {
+export interface PageContent {
   id: string
   section_key: string
   section_name: string
@@ -11,29 +14,51 @@ interface PageContent {
 }
 
 export function usePageContent() {
-  const [data, setData] = useState<PageContent[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<Error | null>(null)
+  const [pageContent, setPageContent] = useState<PageContent[]>([])
+  const [loading, setLoading] = useState<boolean>(true)
+  const [fetchError, setFetchError] = useState<Error | null>(null)
 
   useEffect(() => {
-    const fetchContent = async () => {
+    let isMounted = true
+    
+    async function loadContent() {
       try {
-        const response = await fetch('/api/admin/content')
-        if (!response.ok) throw new Error('Failed to fetch content')
-        const result = await response.json()
-        setData(result)
-      } catch (err) {
-        setError(err instanceof Error ? err : new Error('Unknown error'))
+        setLoading(true)
+        const res = await fetch('/api/admin/content')
+        if (!res.ok) {
+          throw new Error('Content fetch failed')
+        }
+        const json = await res.json()
+        if (isMounted) {
+          setPageContent(json || [])
+        }
+      } catch (e) {
+        if (isMounted) {
+          setFetchError(e instanceof Error ? e : new Error('Unknown error'))
+        }
       } finally {
-        setIsLoading(false)
+        if (isMounted) {
+          setLoading(false)
+        }
       }
     }
-    fetchContent()
+    
+    loadContent()
+    
+    return () => {
+      isMounted = false
+    }
   }, [])
 
-  return { content: data, isLoading, error }
+  return { 
+    content: pageContent, 
+    isLoading: loading, 
+    error: fetchError 
+  }
 }
 
-export function getContentByKey(content: PageContent[], key: string) {
-  return content.find((item) => item.section_key === key)?.content
+export function getContentByKey(contentArray: PageContent[], sectionKey: string) {
+  if (!contentArray || !Array.isArray(contentArray)) return null
+  const found = contentArray.find((item) => item.section_key === sectionKey)
+  return found?.content || null
 }
