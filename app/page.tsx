@@ -1,33 +1,19 @@
-"use client"
-// Main homepage - redirects to full site
-import { usePageContent, getContentByKey } from "@/hooks/usePageContent"
-
-export default function HomePage() {
-  const { content, isLoading } = usePageContent()
-  
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <p>Loading...</p>
-      </div>
-    )
-  }
-
-  const heroContent = getContentByKey(content, 'hero')
-  
+// Root page - Simple static page that doesn't import any hooks
+export default function RootPage() {
   return (
-    <div className="min-h-screen bg-white p-8">
-      <h1 className="text-4xl font-bold mb-4">
-        {heroContent?.title || "Alliance of Progressives in Ethiopia"}
-      </h1>
-      <p className="text-xl text-gray-600">
-        {heroContent?.subtitle || "Empowering Southern Nations through Action, Research, and Advocacy"}
-      </p>
-      <p className="mt-8">
-        <a href="/Alliance-of-Progressives-in-Ethiopia-master-2" className="text-blue-600 underline">
-          Go to full site
-        </a>
-      </p>
+    <div style={{ 
+      display: 'flex', 
+      flexDirection: 'column',
+      alignItems: 'center', 
+      justifyContent: 'center', 
+      minHeight: '100vh',
+      fontFamily: 'system-ui, sans-serif'
+    }}>
+      <h1>Alliance of Progressives in Ethiopia</h1>
+      <p>Loading main site...</p>
+      <script dangerouslySetInnerHTML={{
+        __html: `window.location.href = '/';`
+      }} />
     </div>
   )
 }
