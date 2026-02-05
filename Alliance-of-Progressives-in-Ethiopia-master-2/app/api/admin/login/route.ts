@@ -12,12 +12,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Get the Supabase URL and key from environment
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+    // Get the Supabase URL and key from environment (try multiple possible names)
+    const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_ANON_KEY
 
     if (!supabaseUrl || !supabaseKey) {
-      console.error('Missing Supabase environment variables')
       return NextResponse.json(
         { error: 'Server configuration error' },
         { status: 500 }

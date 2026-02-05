@@ -1,6 +1,8 @@
+"use client"
+
 import { useEffect, useState } from 'react'
 
-export interface PageContent {
+interface PageContent {
   id: string
   section_key: string
   section_name: string
@@ -16,7 +18,6 @@ export function usePageContent() {
   useEffect(() => {
     const fetchContent = async () => {
       try {
-        setIsLoading(true)
         const response = await fetch('/api/admin/content')
         if (!response.ok) throw new Error('Failed to fetch content')
         const result = await response.json()
@@ -27,7 +28,6 @@ export function usePageContent() {
         setIsLoading(false)
       }
     }
-
     fetchContent()
   }, [])
 
