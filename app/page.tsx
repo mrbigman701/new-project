@@ -1,5 +1,5 @@
 "use client"
-
+// Main homepage - redirects to full site
 import { usePageContent, getContentByKey } from "@/hooks/usePageContent"
 
 export default function HomePage() {

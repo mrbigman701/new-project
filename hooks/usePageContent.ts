@@ -1,5 +1,5 @@
 "use client"
-
+// Fixed: Using native React hooks instead of SWR
 import { useEffect, useState } from 'react'
 
 interface PageContent {
