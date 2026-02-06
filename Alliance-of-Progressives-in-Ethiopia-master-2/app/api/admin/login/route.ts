@@ -1,6 +1,13 @@
-import { createClient } from "@/lib/supabase/server"
+import { createClient } from "@supabase/supabase-js"
 import { NextRequest, NextResponse } from "next/server"
 import crypto from "crypto"
+
+function getSupabase() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+  if (!url || !key) throw new Error("Missing Supabase env vars")
+  return createClient(url, key)
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,12 +20,7 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    console.log("[v0] Login attempt for:", email)
-    console.log("[v0] NEXT_PUBLIC_SUPABASE_URL:", process.env.NEXT_PUBLIC_SUPABASE_URL ? "SET" : "MISSING")
-    console.log("[v0] NEXT_PUBLIC_SUPABASE_ANON_KEY:", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "SET" : "MISSING")
-
-    const supabase = await createClient()
-    console.log("[v0] Supabase client created successfully")
+    const supabase = getSupabase()
 
     const { data: users, error } = await supabase
       .from("admin_users")
@@ -26,10 +28,8 @@ export async function POST(request: NextRequest) {
       .eq("email", email)
       .limit(1)
 
-    console.log("[v0] Query result - users:", users?.length, "error:", error?.message || "none")
-
     if (error) {
-      console.error("[v0] Database error:", error)
+      console.error("Database error:", error)
       return NextResponse.json(
         { error: "Server error" },
         { status: 500 }
