@@ -1,17 +1,36 @@
 import { createClient } from "@supabase/supabase-js"
 import { NextRequest, NextResponse } from "next/server"
-import crypto from "crypto"
+
+// Use Web Crypto API (works in both Edge and Node runtimes)
+async function sha256(message: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(message)
+  const hashBuffer = await globalThis.crypto.subtle.digest("SHA-256", data)
+  const hashArray = Array.from(new Uint8Array(hashBuffer))
+  return hashArray.map((b) => b.toString(16).padStart(2, "0")).join("")
+}
+
+function generateToken(): string {
+  const array = new Uint8Array(32)
+  globalThis.crypto.getRandomValues(array)
+  return Array.from(array, (b) => b.toString(16).padStart(2, "0")).join("")
+}
 
 function getSupabase() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL
   const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-  if (!url || !key) throw new Error("Missing Supabase env vars")
+  if (!url || !key) {
+    console.log("[v0] SUPABASE_URL:", url ? "SET" : "MISSING")
+    console.log("[v0] SUPABASE_ANON_KEY:", key ? "SET" : "MISSING")
+    throw new Error("Missing Supabase env vars")
+  }
   return createClient(url, key)
 }
 
 export async function POST(request: NextRequest) {
   try {
-    const { email, password } = await request.json()
+    const body = await request.json()
+    const { email, password } = body
 
     if (!email || !password) {
       return NextResponse.json(
@@ -20,7 +39,16 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    const supabase = getSupabase()
+    let supabase
+    try {
+      supabase = getSupabase()
+    } catch (e) {
+      console.log("[v0] Supabase client creation failed:", (e as Error).message)
+      return NextResponse.json(
+        { error: "Server configuration error" },
+        { status: 500 }
+      )
+    }
 
     const { data: users, error } = await supabase
       .from("admin_users")
@@ -29,7 +57,7 @@ export async function POST(request: NextRequest) {
       .limit(1)
 
     if (error) {
-      console.error("Database error:", error)
+      console.log("[v0] Database query error:", error.message)
       return NextResponse.json(
         { error: "Server error" },
         { status: 500 }
@@ -45,11 +73,11 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Verify password - SHA256 hash using UTF8 encoding to match PostgreSQL
-    const passwordHash = crypto
-      .createHash("sha256")
-      .update(Buffer.from(password, "utf8"))
-      .digest("hex")
+    // Verify password using Web Crypto SHA256 (matches PostgreSQL encode(sha256(convert_to(..., 'UTF8')), 'hex'))
+    const passwordHash = await sha256(password)
+    console.log("[v0] Computed hash:", passwordHash)
+    console.log("[v0] Stored hash:", admin.password_hash)
+    console.log("[v0] Match:", passwordHash === admin.password_hash)
 
     if (passwordHash !== admin.password_hash) {
       return NextResponse.json(
@@ -59,7 +87,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate session token
-    const token = crypto.randomBytes(32).toString("hex")
+    const token = generateToken()
 
     // Set HTTP-only cookie for session
     const response = NextResponse.json({
@@ -73,7 +101,7 @@ export async function POST(request: NextRequest) {
       httpOnly: true,
       secure: process.env.NODE_ENV === "production",
       sameSite: "lax",
-      maxAge: 60 * 60 * 24, // 24 hours
+      maxAge: 60 * 60 * 24,
       path: "/",
     })
 
@@ -87,7 +115,7 @@ export async function POST(request: NextRequest) {
 
     return response
   } catch (error) {
-    console.error("Login error:", error)
+    console.log("[v0] Login catch error:", (error as Error).message)
     return NextResponse.json({ error: "Login failed" }, { status: 500 })
   }
 }
