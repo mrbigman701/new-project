@@ -13,7 +13,12 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    console.log("[v0] Login attempt for:", email)
+    console.log("[v0] NEXT_PUBLIC_SUPABASE_URL:", process.env.NEXT_PUBLIC_SUPABASE_URL ? "SET" : "MISSING")
+    console.log("[v0] NEXT_PUBLIC_SUPABASE_ANON_KEY:", process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ? "SET" : "MISSING")
+
     const supabase = await createClient()
+    console.log("[v0] Supabase client created successfully")
 
     const { data: users, error } = await supabase
       .from("admin_users")
@@ -21,8 +26,10 @@ export async function POST(request: NextRequest) {
       .eq("email", email)
       .limit(1)
 
+    console.log("[v0] Query result - users:", users?.length, "error:", error?.message || "none")
+
     if (error) {
-      console.error("Database error:", error)
+      console.error("[v0] Database error:", error)
       return NextResponse.json(
         { error: "Server error" },
         { status: 500 }
